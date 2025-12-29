@@ -1,0 +1,320 @@
+--==================================================
+-- Nuclear HUB เวอร์ชันล่าสุด | BY Sample สุดหล่อ
+--==================================================
+
+--================ LOAD UI =================
+local WindUI = loadstring(game:HttpGet(
+    "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
+))()
+
+--================ THEME =================
+WindUI:AddTheme({
+    Name = "NuclearGreen",
+    Accent = Color3.fromRGB(0,200,120),
+    Background = Color3.fromRGB(8,14,10),
+    Outline = Color3.fromRGB(0,255,160),
+    Text = Color3.fromRGB(220,255,230),
+    Placeholder = Color3.fromRGB(120,160,140),
+    Button = Color3.fromRGB(20,70,45),
+    Icon = Color3.fromRGB(0,255,160),
+})
+
+--================ WINDOW =================
+local Window = WindUI:CreateWindow({
+    Title = "Nuclear HUB",
+    Icon = "biohazard",
+    Author = "BY Sample สุดหล่อ",
+    Theme = "NuclearGreen",
+})
+
+--================ TABS =================
+local Home     = Window:Tab({ Title = "บ้านมิก",  Icon = "home" })
+local AutoFarm = Window:Tab({ Title = "Auto Farm", Icon = "sword" })
+local Other    = Window:Tab({ Title = "อื่นๆ",     Icon = "settings" })
+
+--================ SERVICES =================
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local WS = game:GetService("Workspace")
+local LP = Players.LocalPlayer
+
+--================ GLOBAL =================
+_G.Aura = false
+_G.PullMon = false
+_G.FollowPlayer = false
+_G.ESP_Active = false
+
+--==================================================
+-- บ้านมิก
+--==================================================
+do
+    local speedVal, jumpVal = 24, 70
+
+    -- ปรับความเร็ว
+    Home:Dropdown({
+        Title = "เลือกความเร็ว",
+        Values = {"16","24","32","48","64"},
+        Value = "24",
+        Callback = function(v) speedVal = tonumber(v) end
+    })
+    Home:Button({
+        Title = "ใช้ความเร็ว",
+        Callback = function()
+            local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.WalkSpeed = speedVal end
+        end
+    })
+
+    -- ปรับกระโดด
+    Home:Dropdown({
+        Title = "เลือกกระโดด",
+        Values = {"50","70","100","140"},
+        Value = "70",
+        Callback = function(v) jumpVal = tonumber(v) end
+    })
+    Home:Button({
+        Title = "ใช้กระโดด",
+        Callback = function()
+            local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.JumpPower = jumpVal end
+        end
+    })
+
+    -- ไฮไลท์ตัวละคร
+    Home:Colorpicker({
+        Title = "Highlight",
+        Default = Color3.fromRGB(0,255,160),
+        Callback = function(c)
+            local ch = LP.Character
+            if ch then
+                local hl = ch:FindFirstChild("HL") or Instance.new("Highlight", ch)
+                hl.Name = "HL"
+                hl.FillColor = c
+                hl.OutlineColor = c
+            end
+        end
+    })
+
+    -- กัน AFK
+    Home:Button({
+        Title = "กัน AFK",
+        Callback = function()
+            local vu = game:GetService("VirtualUser")
+            LP.Idled:Connect(function()
+                vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end)
+        end
+    })
+
+    --================== ESP ผู้เล่น (เปิดปุ่มใน UI แต่ค้างอยู่) ==================
+    Home:Button({
+        Title = "ESP ชื่อผู้เล่น (เปิดอย่างเดียว)",
+        Callback = function()
+            if not _G.ESP_Active then
+                _G.ESP_Active = true
+                task.spawn(function()
+                    while _G.ESP_Active do
+                        task.wait(0.5)
+                        pcall(function()
+                            for _,player in pairs(Players:GetPlayers()) do
+                                if player ~= LP then
+                                    local head = player.Character and player.Character:FindFirstChild("Head")
+                                    if head and not head:FindFirstChild("ESP") then
+                                        local bill = Instance.new("BillboardGui")
+                                        local txt = Instance.new("TextLabel")
+                                        bill.Name = "ESP"
+                                        bill.Parent = head
+                                        bill.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+                                        bill.Active = true
+                                        bill.AlwaysOnTop = true
+                                        bill.LightInfluence = 1
+                                        bill.Size = UDim2.new(0,120,0,25)
+                                        bill.StudsOffset = Vector3.new(0,2.5,0)
+
+                                        txt.Parent = bill
+                                        txt.BackgroundTransparency = 1
+                                        txt.Size = UDim2.new(0,120,0,25)
+                                        txt.Font = Enum.Font.Code
+                                        txt.Text = player.Name
+                                        txt.TextColor3 = Color3.fromRGB(0,255,0)
+                                        txt.TextScaled = true
+                                        txt.TextStrokeTransparency = 0
+                                        txt.TextWrapped = true
+                                    end
+                                end
+                            end
+                        end)
+                    end
+                end)
+            end
+        end
+    })
+end
+
+--==================================================
+-- Auto Farm
+--==================================================
+AutoFarm:Button({
+    Title = "Auto เก็บกล่อง (เปิดอย่างเดียว)",
+    Callback = function()
+        if LP.PlayerGui:FindFirstChild("BlackAll") then return end
+        local gui = Instance.new("ScreenGui", LP.PlayerGui)
+        gui.Name = "BlackAll"
+        gui.IgnoreGuiInset = true
+        gui.ResetOnSpawn = false
+        local f = Instance.new("Frame", gui)
+        f.Size = UDim2.fromScale(1,1)
+        f.Position = UDim2.fromScale(0,0)
+        f.BackgroundColor3 = Color3.new(0,0,0) -- ดำสนิท
+        f.BorderSizePixel = 0
+        f.ZIndex = 999999
+
+        loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/sgrea62-cloud/kaluloo/refs/heads/main/Kalulo"
+        ))()
+    end
+})
+
+-- คิวออร่า (โจมตีไวสุดหลายตัวพร้อมกัน)
+do
+    local RegisterAttack = RS:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RE/RegisterAttack")
+    local RegisterHit = RS.Modules.Net:WaitForChild("RE/RegisterHit")
+    local HITBOX_RADIUS = 50
+
+    local function inRange(p)
+        local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        return hrp and p and (hrp.Position - p.Position).Magnitude <= HITBOX_RADIUS
+    end
+
+    RunService.RenderStepped:Connect(function()
+        if not _G.Aura then return end
+        pcall(function()
+            RegisterAttack:FireServer(0)
+            for _,m in pairs(WS.Enemies:GetChildren()) do
+                if m:FindFirstChild("Humanoid") and m.Humanoid.Health > 0 then
+                    local lh = m:FindFirstChild("LeftHand")
+                    if lh and inRange(lh) then
+                        RegisterHit:FireServer(lh, {}, nil, "01749555")
+                    end
+                end
+            end
+        end)
+    end)
+
+    AutoFarm:Toggle({
+        Title = "คิวออร่า",
+        Value = false, -- เริ่มต้นปิด
+        Callback = function(v) _G.Aura = v end
+    })
+end
+
+-- ไปหาม่อนรอบตัว (รวมมอน 10 ตัว, ค้างบนหัวตัวใกล้ที่สุด)
+do
+    local HEIGHT = 8
+    local function getNearest()
+        local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local best, dist
+        for _,m in pairs(WS.Enemies:GetChildren()) do
+            if m:FindFirstChild("Humanoid") and m.Humanoid.Health > 0 then
+                local mh = m:FindFirstChild("HumanoidRootPart")
+                if mh then
+                    local d = (hrp.Position - mh.Position).Magnitude
+                    if not dist or d < dist then
+                        best, dist = m, d
+                    end
+                end
+            end
+        end
+        return best
+    end
+
+    task.spawn(function()
+        while task.wait(0.1) do
+            if _G.PullMon then
+                local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                local t = getNearest()
+                if hrp and t and t:FindFirstChild("HumanoidRootPart") then
+                    local targetPos = t.HumanoidRootPart.Position + Vector3.new(0, HEIGHT, 0)
+                    hrp.CFrame = CFrame.new(targetPos)
+                    hrp.Velocity = Vector3.zero
+                end
+            end
+        end
+    end)
+
+    AutoFarm:Toggle({
+        Title = "ไปหาม่อนรอบตัว",
+        Value = false, -- เริ่มต้นปิด
+        Callback = function(v) _G.PullMon = v end
+    })
+end
+
+--==================================================
+-- อื่นๆ
+--==================================================
+do
+    local Selected
+    local FollowConn
+
+    local function getNames()
+        local t = {}
+        for _,p in pairs(Players:GetPlayers()) do
+            if p ~= LP then table.insert(t, p.Name) end
+        end
+        return t
+    end
+
+    Other:Dropdown({
+        Title = "เลือกผู้เล่น",
+        Values = getNames(),
+        Callback = function(v) Selected = v end
+    })
+
+    Other:Toggle({
+        Title = "ไปหาผู้เล่น (ยืนบนหัว)",
+        Value = false,
+        Callback = function(v)
+            _G.FollowPlayer = v
+            if FollowConn then FollowConn:Disconnect() FollowConn = nil end
+            if v and Selected then
+                FollowConn = RunService.Heartbeat:Connect(function()
+                    local tp = Players:FindFirstChild(Selected)
+                    local th = tp and tp.Character and tp.Character:FindFirstChild("HumanoidRootPart")
+                    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp and th then
+                        hrp.CFrame = th.CFrame * CFrame.new(0,6,0)
+                        hrp.Velocity = Vector3.zero
+                    end
+                end)
+            end
+        end
+    })
+
+    -- FPS Boost
+    Other:Button({
+        Title = "FPS Boost",
+        Callback = function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end
+    })
+end
+
+--==================================================
+-- AutoRun: ฮาคิ + ใช้หมัด
+--==================================================
+task.spawn(function()
+    local args = { [1] = "Buso" }
+    RS.Remotes.CommF_:InvokeServer(unpack(args))
+
+    local char = LP.Character
+    if char and char:FindFirstChild("Combat") then
+        local evt = char.Combat:FindFirstChild("EquipEvent")
+        if evt then
+            evt:FireServer(true)
+        end
+    end
+end)
