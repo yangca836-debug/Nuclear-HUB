@@ -28,7 +28,7 @@ local Window = WindUI:CreateWindow({
 })
 
 --================ TABS =================
-local Home     = Window:Tab({ Title = "บ้านมิก",  Icon = "house" })
+local Home     = Window:Tab({ Title = "บ้านมิก",  Icon = "home" })
 local AutoFarm = Window:Tab({ Title = "Auto Farm", Icon = "sword" })
 local Other    = Window:Tab({ Title = "อื่นๆ",     Icon = "settings" })
 
@@ -81,20 +81,17 @@ do
         end
     })
 
-    -- ไฮไลท์ผู้เล่นทั้งหมด
+    -- ไฮไลท์ผู้เล่น
     Home:Colorpicker({
         Title = "Highlight ผู้เล่น",
         Default = Color3.fromRGB(0,255,160),
         Callback = function(c)
             for _,player in pairs(Players:GetPlayers()) do
-                if player ~= LP then
-                    local ch = player.Character
-                    if ch then
-                        local hl = ch:FindFirstChild("HL") or Instance.new("Highlight", ch)
-                        hl.Name = "HL"
-                        hl.FillColor = c
-                        hl.OutlineColor = c
-                    end
+                if player.Character then
+                    local hl = player.Character:FindFirstChild("HL") or Instance.new("Highlight", player.Character)
+                    hl.Name = "HL"
+                    hl.FillColor = c
+                    hl.OutlineColor = c
                 end
             end
         end
@@ -113,7 +110,7 @@ do
         end
     })
 
-    -- ESP ผู้เล่น (เปิดปุ่มเดียว)
+    -- ESP ผู้เล่น (เปิดอย่างเดียว)
     Home:Button({
         Title = "ESP ชื่อผู้เล่น (เปิดอย่างเดียว)",
         Callback = function()
@@ -161,6 +158,7 @@ end
 --==================================================
 -- Auto Farm
 --==================================================
+-- Auto เก็บกล่อง (เปิดอย่างเดียว)
 AutoFarm:Button({
     Title = "Auto เก็บกล่อง (เปิดอย่างเดียว)",
     Callback = function()
@@ -172,7 +170,7 @@ AutoFarm:Button({
         local f = Instance.new("Frame", gui)
         f.Size = UDim2.fromScale(1,1)
         f.Position = UDim2.fromScale(0,0)
-        f.BackgroundColor3 = Color3.new(0,0,0) -- ดำสุด
+        f.BackgroundColor3 = Color3.new(0,0,0) -- ดำสนิท
         f.BorderSizePixel = 0
         f.ZIndex = 999999
 
@@ -182,7 +180,7 @@ AutoFarm:Button({
     end
 })
 
--- คิวออร่า (โจมตีไวสุดหลายตัวพร้อมกัน)
+-- คิวออร่า (โจมตีไวสุดหลายตัว)
 do
     local RegisterAttack = RS:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RE/RegisterAttack")
     local RegisterHit = RS.Modules.Net:WaitForChild("RE/RegisterHit")
@@ -210,14 +208,18 @@ do
 
     AutoFarm:Toggle({
         Title = "คิวออร่า",
-        Value = false,
+        Value = false, -- เริ่มต้นปิด
         Callback = function(v) _G.Aura = v end
     })
 end
 
--- รวมมอน / ไปหามอนรอบตัว
+-- ไปหาม่อน (วนรอบหัวมอน, 10 ตัว)
 do
     local HEIGHT = 8
+    local RADIUS = 10
+    local ROT_SPEED = 0.07
+    local angle = 0
+
     local function getNearest()
         local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
@@ -237,13 +239,14 @@ do
     end
 
     task.spawn(function()
-        while task.wait(0.1) do
+        while task.wait(0.01) do
             if _G.PullMon then
                 local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                local t = getNearest()
-                if hrp and t and t:FindFirstChild("HumanoidRootPart") then
-                    local targetPos = t.HumanoidRootPart.Position + Vector3.new(0, HEIGHT, 0)
-                    hrp.CFrame = CFrame.new(targetPos)
+                local target = getNearest()
+                if hrp and target and target:FindFirstChild("HumanoidRootPart") then
+                    angle = angle + ROT_SPEED
+                    local offset = Vector3.new(math.cos(angle)*RADIUS, HEIGHT, math.sin(angle)*RADIUS)
+                    hrp.CFrame = hrp.CFrame:Lerp(CFrame.new(target.HumanoidRootPart.Position + offset),0.8)
                     hrp.Velocity = Vector3.zero
                 end
             end
@@ -251,7 +254,7 @@ do
     end)
 
     AutoFarm:Toggle({
-        Title = "รวมม่อน 10 ตัว",
+        Title = "ไปหาม่อน",
         Value = false,
         Callback = function(v) _G.PullMon = v end
     })
@@ -263,7 +266,6 @@ end
 do
     local Selected
     local FollowConn
-    local PlayerDropdown
 
     local function getNames()
         local t = {}
@@ -273,22 +275,12 @@ do
         return t
     end
 
-    -- สร้าง Dropdown ผู้เล่น
-    PlayerDropdown = Other:Dropdown({
+    Other:Dropdown({
         Title = "เลือกผู้เล่น",
         Values = getNames(),
         Callback = function(v) Selected = v end
     })
 
-    -- อัพเดทรายชื่อทุก 15 วินาที
-    task.spawn(function()
-        while task.wait(15) do
-            local names = getNames()
-            PlayerDropdown:UpdateValues(names)
-        end
-    end)
-
-    -- ไปหาผู้เล่น (ยืนบนหัว)
     Other:Toggle({
         Title = "ไปหาผู้เล่น (ยืนบนหัว)",
         Value = false,
