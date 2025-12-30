@@ -21,7 +21,7 @@ WindUI:AddTheme({
 
 --================ WINDOW =================
 local Window = WindUI:CreateWindow({
-    Title = "Nuclear HUB",
+    Title = "Spring trap HUB",
     Icon = "biohazard",
     Author = "BY Sample สุดหล่อ",
     Theme = "NuclearGreen",
