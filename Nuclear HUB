@@ -1,7 +1,3 @@
---==================================================
--- Nuclear HUB เวอร์ชันล่าสุด | BY Sample สุดหล่อ
---==================================================
-
 --================ LOAD UI =================
 local WindUI = loadstring(game:HttpGet(
     "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
