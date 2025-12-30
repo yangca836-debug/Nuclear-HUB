@@ -28,7 +28,7 @@ local Window = WindUI:CreateWindow({
 })
 
 --================ TABS =================
-local Home     = Window:Tab({ Title = "บ้านมิก",  Icon = "home" })
+local Home     = Window:Tab({ Title = "บ้านมิก",  Icon = "house" })
 local AutoFarm = Window:Tab({ Title = "Auto Farm", Icon = "sword" })
 local Other    = Window:Tab({ Title = "อื่นๆ",     Icon = "settings" })
 
@@ -81,17 +81,21 @@ do
         end
     })
 
-    -- ไฮไลท์ตัวละคร
+    -- ไฮไลท์ผู้เล่นทั้งหมด
     Home:Colorpicker({
-        Title = "Highlight",
+        Title = "Highlight ผู้เล่น",
         Default = Color3.fromRGB(0,255,160),
         Callback = function(c)
-            local ch = LP.Character
-            if ch then
-                local hl = ch:FindFirstChild("HL") or Instance.new("Highlight", ch)
-                hl.Name = "HL"
-                hl.FillColor = c
-                hl.OutlineColor = c
+            for _,player in pairs(Players:GetPlayers()) do
+                if player ~= LP then
+                    local ch = player.Character
+                    if ch then
+                        local hl = ch:FindFirstChild("HL") or Instance.new("Highlight", ch)
+                        hl.Name = "HL"
+                        hl.FillColor = c
+                        hl.OutlineColor = c
+                    end
+                end
             end
         end
     })
@@ -109,7 +113,7 @@ do
         end
     })
 
-    --================== ESP ผู้เล่น (เปิดปุ่มใน UI แต่ค้างอยู่) ==================
+    -- ESP ผู้เล่น (เปิดปุ่มเดียว)
     Home:Button({
         Title = "ESP ชื่อผู้เล่น (เปิดอย่างเดียว)",
         Callback = function()
@@ -168,7 +172,7 @@ AutoFarm:Button({
         local f = Instance.new("Frame", gui)
         f.Size = UDim2.fromScale(1,1)
         f.Position = UDim2.fromScale(0,0)
-        f.BackgroundColor3 = Color3.new(0,0,0) -- ดำสนิท
+        f.BackgroundColor3 = Color3.new(0,0,0) -- ดำสุด
         f.BorderSizePixel = 0
         f.ZIndex = 999999
 
@@ -206,12 +210,12 @@ do
 
     AutoFarm:Toggle({
         Title = "คิวออร่า",
-        Value = false, -- เริ่มต้นปิด
+        Value = false,
         Callback = function(v) _G.Aura = v end
     })
 end
 
--- ไปหาม่อนรอบตัว (รวมมอน 10 ตัว, ค้างบนหัวตัวใกล้ที่สุด)
+-- รวมมอน / ไปหามอนรอบตัว
 do
     local HEIGHT = 8
     local function getNearest()
@@ -247,8 +251,8 @@ do
     end)
 
     AutoFarm:Toggle({
-        Title = "ไปหาม่อนรอบตัว",
-        Value = false, -- เริ่มต้นปิด
+        Title = "รวมม่อน 10 ตัว",
+        Value = false,
         Callback = function(v) _G.PullMon = v end
     })
 end
@@ -259,6 +263,7 @@ end
 do
     local Selected
     local FollowConn
+    local PlayerDropdown
 
     local function getNames()
         local t = {}
@@ -268,12 +273,22 @@ do
         return t
     end
 
-    Other:Dropdown({
+    -- สร้าง Dropdown ผู้เล่น
+    PlayerDropdown = Other:Dropdown({
         Title = "เลือกผู้เล่น",
         Values = getNames(),
         Callback = function(v) Selected = v end
     })
 
+    -- อัพเดทรายชื่อทุก 15 วินาที
+    task.spawn(function()
+        while task.wait(15) do
+            local names = getNames()
+            PlayerDropdown:UpdateValues(names)
+        end
+    end)
+
+    -- ไปหาผู้เล่น (ยืนบนหัว)
     Other:Toggle({
         Title = "ไปหาผู้เล่น (ยืนบนหัว)",
         Value = false,
