@@ -1,0 +1,305 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RUNNING = true
+
+-- [ Settings & Configs ] --
+_G.ESP_ENABLED = false
+_G.AIM_ENABLED = false
+_G.AVATAR_ENABLED = false
+_G.AUTO_COIN = false 
+_G.FLING_ACTIVE = false 
+
+_G.SPEED = 25
+_G.FLING_POWER = 1000000 -- << เซ็ตค่าเริ่มต้น 1 ล้านตรงนี้
+_G.HEIGHT = 3
+_G.COLLECT_DISTANCE = 5
+_G.DETECTION_RANGE = 100
+
+local RoleColors = {
+    Murderer = Color3.fromRGB(255, 0, 0),    
+    Sheriff = Color3.fromRGB(0, 200, 255),   
+    Innocent = Color3.fromRGB(0, 255, 50)    
+}
+
+local function tween(obj, props, time)
+    TweenService:Create(obj, TweenInfo.new(time or 0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), props):Play()
+end
+
+-- [ Create GUI ] --
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = "Starfish_Fling_1M_Power"
+
+local Main = Instance.new("Frame", gui)
+Main.Size = UDim2.new(0, 220, 0, 320)
+Main.Position = UDim2.new(0, 15, 0.5, -160)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Main.Active = true
+Main.BorderSizePixel = 0 
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 14)
+
+-- Sidebar Toggle
+local SideTab = Instance.new("TextButton", Main)
+SideTab.Size = UDim2.new(0, 26, 0, 60)
+SideTab.Position = UDim2.new(1, 4, 0.5, -30)
+SideTab.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+SideTab.Text = "★"
+SideTab.TextColor3 = Color3.fromRGB(255, 127, 80)
+SideTab.Font = Enum.Font.GothamBold
+SideTab.TextSize = 18
+SideTab.BorderSizePixel = 0
+Instance.new("UICorner", SideTab).CornerRadius = UDim.new(0, 8)
+
+-- Header
+local TopBar = Instance.new("Frame", Main)
+TopBar.Size = UDim2.new(1, 0, 0, 45)
+TopBar.BackgroundTransparency = 1
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.Text = "ปลาดาวHUB (1M POWER)"
+Title.TextColor3 = Color3.fromRGB(240, 240, 245)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 14
+Title.BackgroundTransparency = 1
+
+-- Scrolling Container
+local Scroll = Instance.new("ScrollingFrame", Main)
+Scroll.Size = UDim2.new(1, 0, 1, -95)
+Scroll.Position = UDim2.new(0, 0, 0, 55)
+Scroll.BackgroundTransparency = 1
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 600) 
+Scroll.ScrollBarThickness = 2
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 127, 80)
+
+local List = Instance.new("UIListLayout", Scroll)
+List.HorizontalAlignment = Enum.HorizontalAlignment.Center
+List.Padding = UDim.new(0, 8)
+List.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- [ UI Components ] --
+local function createToggle(name, default, callback, order)
+    local Btn = Instance.new("TextButton", Scroll)
+    Btn.Size = UDim2.new(1, -26, 0, 36)
+    Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Btn.Text = "  " .. name
+    Btn.TextColor3 = Color3.fromRGB(240, 240, 245)
+    Btn.Font = Enum.Font.GothamSemibold
+    Btn.TextSize = 11
+    Btn.TextXAlignment = Enum.TextXAlignment.Left
+    Btn.LayoutOrder = order
+    Btn.BorderSizePixel = 0
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
+    
+    local Sw = Instance.new("Frame", Btn)
+    Sw.Size = UDim2.new(0, 32, 0, 16)
+    Sw.Position = UDim2.new(1, -42, 0.5, -8)
+    Sw.BackgroundColor3 = default and Color3.fromRGB(255, 127, 80) or Color3.fromRGB(50, 50, 60)
+    Sw.BorderSizePixel = 0
+    Instance.new("UICorner", Sw).CornerRadius = UDim.new(1, 0)
+    
+    local state = default
+    Btn.MouseButton1Click:Connect(function()
+        state = not state
+        callback(state)
+        tween(Sw, {BackgroundColor3 = state and Color3.fromRGB(255, 127, 80) or Color3.fromRGB(50, 50, 60)})
+    end)
+end
+
+local function createSlider(name, min, max, default, callback, order, suffix)
+    local Frame = Instance.new("Frame", Scroll)
+    Frame.Size = UDim2.new(1, -26, 0, 50)
+    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    Frame.LayoutOrder = order
+    Frame.BorderSizePixel = 0
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    
+    local Label = Instance.new("TextLabel", Frame)
+    Label.Size = UDim2.new(1, -20, 0, 20)
+    Label.Position = UDim2.new(0, 10, 0, 5)
+    Label.Text = name .. " : " .. tostring(default) .. (suffix or "")
+    Label.TextColor3 = Color3.fromRGB(240, 240, 245)
+    Label.Font = Enum.Font.GothamSemibold
+    Label.TextSize = 10
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+
+    local SliderBg = Instance.new("Frame", Frame)
+    SliderBg.Size = UDim2.new(1, -20, 0, 6)
+    SliderBg.Position = UDim2.new(0, 10, 0, 32)
+    SliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    SliderBg.BorderSizePixel = 0
+    Instance.new("UICorner", SliderBg).CornerRadius = UDim.new(1, 0)
+
+    local Fill = Instance.new("Frame", SliderBg)
+    Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    Fill.BackgroundColor3 = Color3.fromRGB(255, 127, 80)
+    Fill.BorderSizePixel = 0
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+    
+    local Btn = Instance.new("TextButton", SliderBg)
+    Btn.Size = UDim2.new(1, 0, 1, 20)
+    Btn.Position = UDim2.new(0, 0, 0.5, -10)
+    Btn.BackgroundTransparency = 1
+    Btn.Text = ""
+
+    local dragging = false
+    local inputObj = nil
+
+    local function update(x)
+        local pos = math.clamp((x - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X, 0, 1)
+        local value = math.floor(min + ((max - min) * pos))
+        Fill.Size = UDim2.new(pos, 0, 1, 0)
+        Label.Text = name .. " : " .. tostring(value) .. (suffix or "")
+        callback(value)
+    end
+
+    Btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; inputObj = input; Scroll.ScrollingEnabled = false
+        end
+    end)
+    
+    UIS.InputEnded:Connect(function(input)
+        if input == inputObj then dragging = false; inputObj = nil; Scroll.ScrollingEnabled = true end
+    end)
+    
+    RunService.RenderStepped:Connect(function()
+        if dragging and inputObj then update(inputObj.Position.X) end
+    end)
+end
+
+-- [ Setup UI Components ] --
+createToggle("ESP Highlight", _G.ESP_ENABLED, function(s) _G.ESP_ENABLED = s end, 1)
+createToggle("HARDCORE AIMBOT", _G.AIM_ENABLED, function(s) _G.AIM_ENABLED = s end, 2)
+createToggle("Show Avatar Icon", _G.AVATAR_ENABLED, function(s) _G.AVATAR_ENABLED = s end, 3)
+createToggle("Auto เก็บเหรียญ", _G.AUTO_COIN, function(s) _G.AUTO_COIN = s end, 4)
+createSlider("ความเร็วเก็บเหรียญ", 16, 100, _G.SPEED, function(v) _G.SPEED = v end, 5, " (แนะนำ: 25)")
+createToggle("Stable Fling (เดินชน)", _G.FLING_ACTIVE, function(s) _G.FLING_ACTIVE = s end, 6)
+createSlider("Fling Power", 5000, 3000000, _G.FLING_POWER, function(v) _G.FLING_POWER = v end, 7) -- เพิ่ม Max เป็น 3 ล้าน
+
+-- Uninject
+local Exit = Instance.new("TextButton", Main)
+Exit.Size = UDim2.new(1, -30, 0, 28)
+Exit.Position = UDim2.new(0, 15, 1, -38)
+Exit.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
+Exit.Text = "Uninject"
+Exit.TextColor3 = Color3.fromRGB(255, 60, 100)
+Exit.Font = Enum.Font.GothamBold
+Exit.TextSize = 11
+Exit.BorderSizePixel = 0
+Instance.new("UICorner", Exit).CornerRadius = UDim.new(0, 8)
+Exit.MouseButton1Click:Connect(function() RUNNING = false; gui:Destroy() end)
+
+-- [ Fling Logic ] --
+RunService.Heartbeat:Connect(function()
+    if not RUNNING then return end
+    if _G.FLING_ACTIVE and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local root = LocalPlayer.Character.HumanoidRootPart
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        
+        local oldVel = root.Velocity
+        root.Velocity = Vector3.new(_G.FLING_POWER, _G.FLING_POWER, _G.FLING_POWER)
+        RunService.RenderStepped:Wait()
+        root.Velocity = oldVel 
+        
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+        end
+    end
+end)
+
+-- กันตัวละครล้ม
+LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid").StateChanged:Connect(function(_, newState)
+        if _G.FLING_ACTIVE and newState == Enum.HumanoidStateType.FallingDown then
+            char.Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+        end
+    end)
+end)
+
+-- [ MM2 Logic Functions ] --
+local function getRole(p)
+    if not p or not p.Character then return "Innocent" end
+    local char = p.Character; local backpack = p:FindFirstChild("Backpack")
+    local hasKnife = char:FindFirstChild("Knife") or char:FindFirstChild("Dagger") or (backpack and (backpack:FindFirstChild("Knife") or backpack:FindFirstChild("Dagger")))
+    local hasGun = char:FindFirstChild("Gun") or char:FindFirstChild("Revolver") or (backpack and (backpack:FindFirstChild("Gun") or backpack:FindFirstChild("Revolver")))
+    if hasKnife then return "Murderer" end
+    if hasGun then return "Sheriff" end
+    return "Innocent"
+end
+
+local function getClosestCoin(hrp)
+    local closest, dist = nil, math.huge
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and (v.Name:find("Coin") or v:FindFirstChild("CoinVisual")) then
+            if v.Transparency < 1 then
+                local d = (hrp.Position - v.Position).Magnitude
+                if d < dist and d < _G.DETECTION_RANGE then dist = d; closest = v end
+            end
+        end
+    end
+    return closest
+end
+
+local bv, bg
+local function handleAutoCoin(myChar, myHrp)
+    if not _G.AUTO_COIN then
+        if bv then bv:Destroy(); bv = nil end
+        if bg then bg:Destroy(); bg = nil end
+        return
+    end
+    if not bv then bv = Instance.new("BodyVelocity", myHrp); bv.MaxForce = Vector3.new(1e6, 1e6, 1e6); bv.Velocity = Vector3.zero end
+    if not bg then bg = Instance.new("BodyGyro", myHrp); bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6); bg.P = 10000 end
+    for _, v in pairs(myChar:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
+    local coin = getClosestCoin(myHrp)
+    if coin then
+        local target = coin.Position + Vector3.new(0, _G.HEIGHT, 0)
+        local direction = (target - myHrp.Position)
+        if (myHrp.Position - coin.Position).Magnitude > _G.COLLECT_DISTANCE then
+            bv.Velocity = direction.Unit * _G.SPEED
+            bg.CFrame = CFrame.new(myHrp.Position, coin.Position)
+        else
+            bv.Velocity = Vector3.new(0,0,0)
+            myHrp.CFrame = myHrp.CFrame:Lerp(CFrame.new(coin.Position), 0.35)
+            firetouchinterest(myHrp, coin, 0); firetouchinterest(myHrp, coin, 1)
+        end
+    else bv.Velocity = Vector3.new(0,0,0) end
+end
+
+RunService.RenderStepped:Connect(function()
+    if not RUNNING then return end
+    local myChar = LocalPlayer.Character
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        pcall(function()
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local char = p.Character; local role = getRole(p); local hl = char:FindFirstChild("SF_Visual")
+                if _G.ESP_ENABLED then
+                    if not hl then hl = Instance.new("Highlight", char); hl.Name = "SF_Visual" end
+                    hl.Enabled = true; hl.FillColor = RoleColors[role]; hl.OutlineColor = RoleColors[role]; hl.FillTransparency = 0.2
+                elseif hl then hl:Destroy() end
+            end
+        end)
+    end
+    if myHrp then handleAutoCoin(myChar, myHrp) end
+end)
+
+-- [ Drag & Sidebar Logic ] --
+local dToggle, dStart, sPos
+TopBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dToggle = true; dStart = i.Position; sPos = Main.Position end end)
+UIS.InputChanged:Connect(function(i) if dToggle and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dStart; Main.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + d.X, sPos.Y.Scale, sPos.Y.Offset + d.Y) end end)
+UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dToggle = false end end)
+
+local isCol = false
+SideTab.MouseButton1Click:Connect(function()
+    isCol = not isCol
+    tween(Main, {Position = isCol and UDim2.new(0, -225, Main.Position.Y.Scale, Main.Position.Y.Offset) or UDim2.new(0, 15, Main.Position.Y.Scale, Main.Position.Y.Offset)})
+    tween(SideTab, {Rotation = isCol and 180 or 0})
+end)
