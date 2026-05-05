@@ -16,10 +16,10 @@ _G.AUTO_COIN = false
 _G.FLING_ACTIVE = false 
 
 _G.SPEED = 25
-_G.FLING_POWER = 1000000 -- << เซ็ตค่าเริ่มต้น 1 ล้านตรงนี้
+_G.FLING_POWER = 1000000 
 _G.HEIGHT = 3
 _G.COLLECT_DISTANCE = 5
-_G.DETECTION_RANGE = 100
+_G.DETECTION_RANGE = 150
 
 local RoleColors = {
     Murderer = Color3.fromRGB(255, 0, 0),    
@@ -33,11 +33,11 @@ end
 
 -- [ Create GUI ] --
 local gui = Instance.new("ScreenGui", CoreGui)
-gui.Name = "Starfish_Fling_1M_Power"
+gui.Name = "Starfish_Ultimate_V6"
 
 local Main = Instance.new("Frame", gui)
-Main.Size = UDim2.new(0, 220, 0, 320)
-Main.Position = UDim2.new(0, 15, 0.5, -160)
+Main.Size = UDim2.new(0, 220, 0, 350) -- เพิ่มความสูงให้พอดีทุกปุ่ม
+Main.Position = UDim2.new(0, 15, 0.5, -175)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Main.Active = true
 Main.BorderSizePixel = 0 
@@ -62,7 +62,7 @@ TopBar.BackgroundTransparency = 1
 
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, 0, 1, 0)
-Title.Text = "ปลาดาวHUB (1M POWER)"
+Title.Text = "ปลาดาวHUB ULTIMATE"
 Title.TextColor3 = Color3.fromRGB(240, 240, 245)
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 14
@@ -73,7 +73,7 @@ local Scroll = Instance.new("ScrollingFrame", Main)
 Scroll.Size = UDim2.new(1, 0, 1, -95)
 Scroll.Position = UDim2.new(0, 0, 0, 55)
 Scroll.BackgroundTransparency = 1
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 600) 
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 650) 
 Scroll.ScrollBarThickness = 2
 Scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 127, 80)
 
@@ -111,7 +111,7 @@ local function createToggle(name, default, callback, order)
     end)
 end
 
-local function createSlider(name, min, max, default, callback, order, suffix)
+local function createSlider(name, min, max, default, callback, order)
     local Frame = Instance.new("Frame", Scroll)
     Frame.Size = UDim2.new(1, -26, 0, 50)
     Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
@@ -122,7 +122,7 @@ local function createSlider(name, min, max, default, callback, order, suffix)
     local Label = Instance.new("TextLabel", Frame)
     Label.Size = UDim2.new(1, -20, 0, 20)
     Label.Position = UDim2.new(0, 10, 0, 5)
-    Label.Text = name .. " : " .. tostring(default) .. (suffix or "")
+    Label.Text = name .. " : " .. tostring(default)
     Label.TextColor3 = Color3.fromRGB(240, 240, 245)
     Label.Font = Enum.Font.GothamSemibold
     Label.TextSize = 10
@@ -155,7 +155,7 @@ local function createSlider(name, min, max, default, callback, order, suffix)
         local pos = math.clamp((x - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X, 0, 1)
         local value = math.floor(min + ((max - min) * pos))
         Fill.Size = UDim2.new(pos, 0, 1, 0)
-        Label.Text = name .. " : " .. tostring(value) .. (suffix or "")
+        Label.Text = name .. " : " .. tostring(value)
         callback(value)
     end
 
@@ -176,14 +176,14 @@ end
 
 -- [ Setup UI Components ] --
 createToggle("ESP Highlight", _G.ESP_ENABLED, function(s) _G.ESP_ENABLED = s end, 1)
-createToggle("HARDCORE AIMBOT", _G.AIM_ENABLED, function(s) _G.AIM_ENABLED = s end, 2)
+createToggle("HARDCORE AIMBOT (ล็อคเป้า)", _G.AIM_ENABLED, function(s) _G.AIM_ENABLED = s end, 2)
 createToggle("Show Avatar Icon", _G.AVATAR_ENABLED, function(s) _G.AVATAR_ENABLED = s end, 3)
 createToggle("Auto เก็บเหรียญ", _G.AUTO_COIN, function(s) _G.AUTO_COIN = s end, 4)
-createSlider("ความเร็วเก็บเหรียญ", 16, 100, _G.SPEED, function(v) _G.SPEED = v end, 5, " (แนะนำ: 25)")
+createSlider("ความเร็วเก็บเหรียญ", 16, 100, _G.SPEED, function(v) _G.SPEED = v end, 5)
 createToggle("Stable Fling (เดินชน)", _G.FLING_ACTIVE, function(s) _G.FLING_ACTIVE = s end, 6)
-createSlider("Fling Power", 5000, 3000000, _G.FLING_POWER, function(v) _G.FLING_POWER = v end, 7) -- เพิ่ม Max เป็น 3 ล้าน
+createSlider("Fling Power", 5000, 2000000, _G.FLING_POWER, function(v) _G.FLING_POWER = v end, 7)
 
--- Uninject
+-- Exit Button
 local Exit = Instance.new("TextButton", Main)
 Exit.Size = UDim2.new(1, -30, 0, 28)
 Exit.Position = UDim2.new(0, 15, 1, -38)
@@ -196,34 +196,7 @@ Exit.BorderSizePixel = 0
 Instance.new("UICorner", Exit).CornerRadius = UDim.new(0, 8)
 Exit.MouseButton1Click:Connect(function() RUNNING = false; gui:Destroy() end)
 
--- [ Fling Logic ] --
-RunService.Heartbeat:Connect(function()
-    if not RUNNING then return end
-    if _G.FLING_ACTIVE and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local root = LocalPlayer.Character.HumanoidRootPart
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        
-        local oldVel = root.Velocity
-        root.Velocity = Vector3.new(_G.FLING_POWER, _G.FLING_POWER, _G.FLING_POWER)
-        RunService.RenderStepped:Wait()
-        root.Velocity = oldVel 
-        
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Running)
-        end
-    end
-end)
-
--- กันตัวละครล้ม
-LocalPlayer.CharacterAdded:Connect(function(char)
-    char:WaitForChild("Humanoid").StateChanged:Connect(function(_, newState)
-        if _G.FLING_ACTIVE and newState == Enum.HumanoidStateType.FallingDown then
-            char.Humanoid:ChangeState(Enum.HumanoidStateType.Running)
-        end
-    end)
-end)
-
--- [ MM2 Logic Functions ] --
+-- [ Logic: Role Detection ] --
 local function getRole(p)
     if not p or not p.Character then return "Innocent" end
     local char = p.Character; local backpack = p:FindFirstChild("Backpack")
@@ -234,6 +207,7 @@ local function getRole(p)
     return "Innocent"
 end
 
+-- [ Logic: Coin Collector ] --
 local function getClosestCoin(hrp)
     local closest, dist = nil, math.huge
     for _, v in pairs(workspace:GetDescendants()) do
@@ -254,49 +228,91 @@ local function handleAutoCoin(myChar, myHrp)
         if bg then bg:Destroy(); bg = nil end
         return
     end
-    if not bv then bv = Instance.new("BodyVelocity", myHrp); bv.MaxForce = Vector3.new(1e6, 1e6, 1e6); bv.Velocity = Vector3.zero end
+    if not bv then bv = Instance.new("BodyVelocity", myHrp); bv.MaxForce = Vector3.new(1e6, 1e6, 1e6) end
     if not bg then bg = Instance.new("BodyGyro", myHrp); bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6); bg.P = 10000 end
     for _, v in pairs(myChar:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
     local coin = getClosestCoin(myHrp)
     if coin then
         local target = coin.Position + Vector3.new(0, _G.HEIGHT, 0)
-        local direction = (target - myHrp.Position)
-        if (myHrp.Position - coin.Position).Magnitude > _G.COLLECT_DISTANCE then
-            bv.Velocity = direction.Unit * _G.SPEED
-            bg.CFrame = CFrame.new(myHrp.Position, coin.Position)
-        else
-            bv.Velocity = Vector3.new(0,0,0)
-            myHrp.CFrame = myHrp.CFrame:Lerp(CFrame.new(coin.Position), 0.35)
-            firetouchinterest(myHrp, coin, 0); firetouchinterest(myHrp, coin, 1)
-        end
-    else bv.Velocity = Vector3.new(0,0,0) end
+        bv.Velocity = (target - myHrp.Position).Unit * _G.SPEED
+        bg.CFrame = CFrame.new(myHrp.Position, coin.Position)
+        firetouchinterest(myHrp, coin, 0); firetouchinterest(myHrp, coin, 1)
+    else bv.Velocity = Vector3.zero end
 end
 
+-- [ Main Render Loop ] --
 RunService.RenderStepped:Connect(function()
     if not RUNNING then return end
     local myChar = LocalPlayer.Character
     local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    local targetMurd = nil
     
     for _, p in pairs(Players:GetPlayers()) do
         pcall(function()
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local char = p.Character; local role = getRole(p); local hl = char:FindFirstChild("SF_Visual")
+                local char = p.Character; local role = getRole(p)
+                
+                -- ESP
+                local hl = char:FindFirstChild("SF_Visual")
                 if _G.ESP_ENABLED then
                     if not hl then hl = Instance.new("Highlight", char); hl.Name = "SF_Visual" end
-                    hl.Enabled = true; hl.FillColor = RoleColors[role]; hl.OutlineColor = RoleColors[role]; hl.FillTransparency = 0.2
+                    hl.Enabled = true; hl.FillColor = RoleColors[role]; hl.OutlineColor = RoleColors[role]
                 elseif hl then hl:Destroy() end
+                
+                -- Avatar Icon
+                local head = char:FindFirstChild("Head")
+                if head then
+                    local icon = head:FindFirstChild("StarIcon")
+                    if _G.AVATAR_ENABLED then
+                        if not icon then
+                            icon = Instance.new("BillboardGui", head); icon.Name = "StarIcon"
+                            icon.Size = UDim2.new(0, 40, 0, 40); icon.StudsOffset = Vector3.new(0, 3, 0); icon.AlwaysOnTop = true
+                            local img = Instance.new("ImageLabel", icon); img.Size = UDim2.new(1,0,1,0); img.BackgroundTransparency = 1
+                            img.Image = "rbxthumb://type=AvatarHeadShot&id="..p.UserId.."&w=150&h=150"
+                            Instance.new("UICorner", img).CornerRadius = UDim.new(1,0)
+                            local str = Instance.new("UIStroke", img); str.Thickness = 2; str.Name = "Outline"
+                        end
+                        icon.ImageLabel.Outline.Color = RoleColors[role]
+                        icon.Enabled = true
+                    elseif icon then icon:Destroy() end
+                end
+                
+                -- ค้นหาฆาตกรเพื่อล้อคเป้า
+                if role == "Murderer" then targetMurd = char end
             end
         end)
     end
+    
+    -- Aimbot Logic
+    if _G.AIM_ENABLED and targetMurd and myChar then
+        local tool = myChar:FindFirstChild("Gun") or myChar:FindFirstChild("Revolver")
+        if tool and targetMurd:FindFirstChild("HumanoidRootPart") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetMurd.HumanoidRootPart.Position)
+        end
+    end
+    
     if myHrp then handleAutoCoin(myChar, myHrp) end
 end)
 
--- [ Drag & Sidebar Logic ] --
+-- [ Fling Heartbeat ] --
+RunService.Heartbeat:Connect(function()
+    if not RUNNING then return end
+    if _G.FLING_ACTIVE and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local root = LocalPlayer.Character.HumanoidRootPart
+        local oldVel = root.Velocity
+        root.Velocity = Vector3.new(_G.FLING_POWER, _G.FLING_POWER, _G.FLING_POWER)
+        RunService.RenderStepped:Wait()
+        root.Velocity = oldVel 
+    end
+end)
+
+-- [ GUI Dragging ] --
 local dToggle, dStart, sPos
 TopBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dToggle = true; dStart = i.Position; sPos = Main.Position end end)
 UIS.InputChanged:Connect(function(i) if dToggle and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dStart; Main.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + d.X, sPos.Y.Scale, sPos.Y.Offset + d.Y) end end)
 UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dToggle = false end end)
 
+-- [ Sidebar Toggle ] --
 local isCol = false
 SideTab.MouseButton1Click:Connect(function()
     isCol = not isCol
