@@ -36,8 +36,10 @@ local gui = Instance.new("ScreenGui", CoreGui)
 gui.Name = "Starfish_Ultimate_V6"
 
 local Main = Instance.new("Frame", gui)
-Main.Size = UDim2.new(0, 220, 0, 350) -- เพิ่มความสูงให้พอดีทุกปุ่ม
-Main.Position = UDim2.new(0, 15, 0.5, -175)
+-- ปรับลดความสูงจาก 350 เหลือ 260 เพื่อให้ UI กระชับขึ้น
+Main.Size = UDim2.new(0, 220, 0, 260) 
+-- ปรับ Position ให้จัดกึ่งกลางพอดีกับความสูงใหม่
+Main.Position = UDim2.new(0, 15, 0.5, -130)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Main.Active = true
 Main.BorderSizePixel = 0 
@@ -70,10 +72,11 @@ Title.BackgroundTransparency = 1
 
 -- Scrolling Container
 local Scroll = Instance.new("ScrollingFrame", Main)
-Scroll.Size = UDim2.new(1, 0, 1, -95)
-Scroll.Position = UDim2.new(0, 0, 0, 55)
+Scroll.Size = UDim2.new(1, 0, 1, -85) -- ปรับให้เว้นระยะปุ่ม Exit พอดี
+Scroll.Position = UDim2.new(0, 0, 0, 45)
 Scroll.BackgroundTransparency = 1
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 650) 
+-- ลดจาก 650 เหลือ 320 ให้พื้นที่การเลื่อนพอดีกับจำนวนเมนู
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 320) 
 Scroll.ScrollBarThickness = 2
 Scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 127, 80)
 
@@ -186,7 +189,7 @@ createSlider("Fling Power", 5000, 2000000, _G.FLING_POWER, function(v) _G.FLING_
 -- Exit Button
 local Exit = Instance.new("TextButton", Main)
 Exit.Size = UDim2.new(1, -30, 0, 28)
-Exit.Position = UDim2.new(0, 15, 1, -38)
+Exit.Position = UDim2.new(0, 15, 1, -35)
 Exit.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
 Exit.Text = "Uninject"
 Exit.TextColor3 = Color3.fromRGB(255, 60, 100)
