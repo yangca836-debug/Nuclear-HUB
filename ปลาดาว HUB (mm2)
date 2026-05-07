@@ -21,6 +21,9 @@ _G.HEIGHT = 3
 _G.COLLECT_DISTANCE = 5
 _G.DETECTION_RANGE = 150
 
+-- ตัวแปรสถานะการล็อก (Global ในสคริปต์นี้)
+local isUILocked = false
+
 local RoleColors = {
     Murderer = Color3.fromRGB(255, 0, 0),    
     Sheriff = Color3.fromRGB(0, 200, 255),   
@@ -36,9 +39,7 @@ local gui = Instance.new("ScreenGui", CoreGui)
 gui.Name = "Starfish_Ultimate_V6"
 
 local Main = Instance.new("Frame", gui)
--- ปรับลดความสูงจาก 350 เหลือ 260 เพื่อให้ UI กระชับขึ้น
 Main.Size = UDim2.new(0, 220, 0, 260) 
--- ปรับ Position ให้จัดกึ่งกลางพอดีกับความสูงใหม่
 Main.Position = UDim2.new(0, 15, 0.5, -130)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Main.Active = true
@@ -72,10 +73,9 @@ Title.BackgroundTransparency = 1
 
 -- Scrolling Container
 local Scroll = Instance.new("ScrollingFrame", Main)
-Scroll.Size = UDim2.new(1, 0, 1, -85) -- ปรับให้เว้นระยะปุ่ม Exit พอดี
+Scroll.Size = UDim2.new(1, 0, 1, -85)
 Scroll.Position = UDim2.new(0, 0, 0, 45)
 Scroll.BackgroundTransparency = 1
--- ลดจาก 650 เหลือ 320 ให้พื้นที่การเลื่อนพอดีกับจำนวนเมนู
 Scroll.CanvasSize = UDim2.new(0, 0, 0, 320) 
 Scroll.ScrollBarThickness = 2
 Scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 127, 80)
@@ -155,6 +155,7 @@ local function createSlider(name, min, max, default, callback, order)
     local inputObj = nil
 
     local function update(x)
+        if isUILocked then return end -- หยุดการทำงานถ้า UI ล็อกอยู่
         local pos = math.clamp((x - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X, 0, 1)
         local value = math.floor(min + ((max - min) * pos))
         Fill.Size = UDim2.new(pos, 0, 1, 0)
@@ -163,6 +164,7 @@ local function createSlider(name, min, max, default, callback, order)
     end
 
     Btn.InputBegan:Connect(function(input)
+        if isUILocked then return end -- ไม่ให้เริ่มลากถ้าล็อกอยู่
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true; inputObj = input; Scroll.ScrollingEnabled = false
         end
@@ -173,7 +175,7 @@ local function createSlider(name, min, max, default, callback, order)
     end)
     
     RunService.RenderStepped:Connect(function()
-        if dragging and inputObj then update(inputObj.Position.X) end
+        if dragging and inputObj and not isUILocked then update(inputObj.Position.X) end
     end)
 end
 
@@ -186,10 +188,27 @@ createSlider("ความเร็วเก็บเหรียญ", 16, 100, 
 createToggle("Stable Fling (เดินชน)", _G.FLING_ACTIVE, function(s) _G.FLING_ACTIVE = s end, 6)
 createSlider("Fling Power", 5000, 2000000, _G.FLING_POWER, function(v) _G.FLING_POWER = v end, 7)
 
--- Exit Button
+-- [ Lock UI Button (ตำแหน่งตามรูปภาพ) ] --
+local LockBtn = Instance.new("TextButton", Main)
+LockBtn.Size = UDim2.new(0, 32, 0, 32)
+LockBtn.Position = UDim2.new(0, 10, 1, -40) -- วางไว้มุมซ้ายล่างเหมือนในรูป
+LockBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+LockBtn.Text = "🔓"
+LockBtn.TextSize = 16
+LockBtn.BorderSizePixel = 0
+Instance.new("UICorner", LockBtn).CornerRadius = UDim.new(0, 8)
+
+LockBtn.MouseButton1Click:Connect(function()
+    isUILocked = not isUILocked
+    LockBtn.Text = isUILocked and "🔒" or "🔓"
+    -- เปลี่ยนสีให้เห็นชัดว่าล็อกแล้ว
+    tween(LockBtn, {BackgroundColor3 = isUILocked and Color3.fromRGB(255, 127, 80) or Color3.fromRGB(40, 40, 50)}, 0.2)
+end)
+
+-- [ Exit Button ] -- (ขยับหลบปุ่ม Lock)
 local Exit = Instance.new("TextButton", Main)
-Exit.Size = UDim2.new(1, -30, 0, 28)
-Exit.Position = UDim2.new(0, 15, 1, -35)
+Exit.Size = UDim2.new(1, -65, 0, 32) 
+Exit.Position = UDim2.new(0, 50, 1, -40)
 Exit.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
 Exit.Text = "Uninject"
 Exit.TextColor3 = Color3.fromRGB(255, 60, 100)
@@ -199,7 +218,8 @@ Exit.BorderSizePixel = 0
 Instance.new("UICorner", Exit).CornerRadius = UDim.new(0, 8)
 Exit.MouseButton1Click:Connect(function() RUNNING = false; gui:Destroy() end)
 
--- [ Logic: Role Detection ] --
+-- [ Logic Sections ] -- (โค้ดส่วนการทำงานเหมือนเดิม)
+
 local function getRole(p)
     if not p or not p.Character then return "Innocent" end
     local char = p.Character; local backpack = p:FindFirstChild("Backpack")
@@ -210,7 +230,6 @@ local function getRole(p)
     return "Innocent"
 end
 
--- [ Logic: Coin Collector ] --
 local function getClosestCoin(hrp)
     local closest, dist = nil, math.huge
     for _, v in pairs(workspace:GetDescendants()) do
@@ -243,7 +262,6 @@ local function handleAutoCoin(myChar, myHrp)
     else bv.Velocity = Vector3.zero end
 end
 
--- [ Main Render Loop ] --
 RunService.RenderStepped:Connect(function()
     if not RUNNING then return end
     local myChar = LocalPlayer.Character
@@ -254,15 +272,12 @@ RunService.RenderStepped:Connect(function()
         pcall(function()
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                 local char = p.Character; local role = getRole(p)
-                
-                -- ESP
                 local hl = char:FindFirstChild("SF_Visual")
                 if _G.ESP_ENABLED then
                     if not hl then hl = Instance.new("Highlight", char); hl.Name = "SF_Visual" end
                     hl.Enabled = true; hl.FillColor = RoleColors[role]; hl.OutlineColor = RoleColors[role]
                 elseif hl then hl:Destroy() end
                 
-                -- Avatar Icon
                 local head = char:FindFirstChild("Head")
                 if head then
                     local icon = head:FindFirstChild("StarIcon")
@@ -279,25 +294,19 @@ RunService.RenderStepped:Connect(function()
                         icon.Enabled = true
                     elseif icon then icon:Destroy() end
                 end
-                
-                -- ค้นหาฆาตกรเพื่อล้อคเป้า
                 if role == "Murderer" then targetMurd = char end
             end
         end)
     end
-    
-    -- Aimbot Logic
     if _G.AIM_ENABLED and targetMurd and myChar then
         local tool = myChar:FindFirstChild("Gun") or myChar:FindFirstChild("Revolver")
         if tool and targetMurd:FindFirstChild("HumanoidRootPart") then
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetMurd.HumanoidRootPart.Position)
         end
     end
-    
     if myHrp then handleAutoCoin(myChar, myHrp) end
 end)
 
--- [ Fling Heartbeat ] --
 RunService.Heartbeat:Connect(function()
     if not RUNNING then return end
     if _G.FLING_ACTIVE and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -311,9 +320,20 @@ end)
 
 -- [ GUI Dragging ] --
 local dToggle, dStart, sPos
-TopBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dToggle = true; dStart = i.Position; sPos = Main.Position end end)
-UIS.InputChanged:Connect(function(i) if dToggle and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dStart; Main.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + d.X, sPos.Y.Scale, sPos.Y.Offset + d.Y) end end)
-UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dToggle = false end end)
+TopBar.InputBegan:Connect(function(i) 
+    if not isUILocked and (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then 
+        dToggle = true; dStart = i.Position; sPos = Main.Position 
+    end 
+end)
+UIS.InputChanged:Connect(function(i) 
+    if dToggle and not isUILocked and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then 
+        local d = i.Position - dStart
+        Main.Position = UDim2.new(sPos.X.Scale, sPos.X.Offset + d.X, sPos.Y.Scale, sPos.Y.Offset + d.Y) 
+    end 
+end)
+UIS.InputEnded:Connect(function(i) 
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dToggle = false end 
+end)
 
 -- [ Sidebar Toggle ] --
 local isCol = false
